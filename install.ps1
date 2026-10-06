@@ -242,7 +242,7 @@ if (-not (Test-Path -LiteralPath $hooks)) { }
 if (Test-AlreadyInstalled $conf 'PreToolUse' 'hook_supervisor.ps1') {
   Write-Host "PreToolUse 闸门已存在，跳过" -ForegroundColor Green
 } else {
-  $existing = Get-ExistingEntries $conf 'PreToolUse' 
+  $existing = Get-ExistingEntries $conf 'PreToolUse'
   $conf.hooks | Add-Member -NotePropertyName PreToolUse -NotePropertyValue (@($existing) + @(New-HookEntry 'supervisor')) -Force
   Write-Host "已接入 PreToolUse 闸门" -ForegroundColor Green
 }
