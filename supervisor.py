@@ -22,6 +22,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -928,6 +929,7 @@ def cmd_status(args):
         "maintenance_active": bool(maint.get("active")),
         "open_debt": count_open_debt(),
         "open_critical_debt": count_open_debt(critical_only=True),
+        "rescue_command": "python supervisor.py rescue",
         "counters": {
             "turns": s.get("turns"), "context_chars": s.get("context_chars"),
             "images": s.get("images_in_context"),
@@ -962,6 +964,8 @@ def cmd_status(args):
             print("MAINT   : ON  " + maintenance_text(maint))
         else:
             print("MAINT   : OFF")
+        if level in ("DEGRADED", "BLOCKED"):
+            print("被卡住了？: 双击桌面「管家-紧急恢复」，或运行  python supervisor.py rescue")
         print(f"LEVEL   : {level}  (score={score})")
         print(f"SESSION : {out['session']}   codex={out.get('codex_session')}   elapsed={out['elapsed_min']}min")
         print(f"RULES   : {detail}")
@@ -1261,6 +1265,90 @@ def cmd_reset(args):
     return 0
 
 
+def cmd_rescue(args):
+    """紧急恢复：把管家从任何状态拉回可用。
+
+    设计前提（这是"搞砸了也收得了场"的那条通道）：
+      · **不读 rules.json** —— 规则坏了也能跑；
+      · **不检查是否在 Codex 内** —— 紧急通道必须随时可用；
+      · **不要求 --by/--reason** —— 卡住的人不该再被参数难住；
+      · 幂等：跑多少次结果一样；
+      · 只动 state，不碰规则、不碰信任、不碰 hook 接线；
+      · 全程写审计（actor=rescue），并把人话结果打到屏幕。
+
+    做四件事：① 归档修不好的 state 文件 ② 会话重置为 NORMAL
+              ③ 清阻断/指令 ④ 关掉维护模式。
+    """
+    ensure_layout()
+    done = []
+    backup_dir = None
+    try:
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_dir = STATE / ("_rescue_%s" % ts)
+        for name in ("session.json", "intervention.json", "maintenance.json"):
+            fp = STATE / name
+            if fp.exists():
+                try:
+                    json.loads(fp.read_text(encoding="utf-8"))
+                except Exception:
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(fp, backup_dir / name)
+                    fp.unlink()
+                    done.append("归档了损坏的 %s" % name)
+    except Exception as exc:
+        done.append("归档损坏文件时跳过：%r" % exc)
+
+    # ① 会话重置
+    try:
+        s = new_session()
+        atomic_write_json(SESSION, s)
+        done.append("会话已重置（%s）" % s.get("session_id"))
+    except Exception as exc:
+        done.append("会话重置失败：%r" % exc)
+        s = {}
+
+    # ② 清阻断 / 指令
+    try:
+        atomic_write_json(INTERVENTION, {
+            "ts": now_iso(), "level": "NORMAL", "active": False, "directive": None,
+            "rescued_by": str(getattr(args, "by", "") or "rescue"),
+            "rescued_at": now_iso(),
+            "reason": str(getattr(args, "reason", "") or "紧急恢复"),
+        })
+        done.append("阻断与指令已清除（等级 NORMAL）")
+    except Exception as exc:
+        done.append("清除阻断失败：%r" % exc)
+
+    # ③ 关维护模式
+    try:
+        m = write_maintenance(False, by=str(getattr(args, "by", "") or "rescue"),
+                              reason=str(getattr(args, "reason", "") or "紧急恢复"))
+        done.append("维护模式已关闭（原状态：%s）" % ("开启" if m.get("active") else "未开启"))
+    except Exception as exc:
+        done.append("关闭维护模式失败：%r" % exc)
+
+    try:
+        audit("rescue", by=str(getattr(args, "by", "") or "rescue"),
+              reason=str(getattr(args, "reason", "") or "紧急恢复"),
+              session=s.get("session_id"), steps=done)
+    except Exception:
+        pass
+
+    if getattr(args, "json", False):
+        print(json.dumps({"ok": True, "steps": done,
+                          "session": s.get("session_id"),
+                          "backup_dir": str(backup_dir) if backup_dir else None},
+                         ensure_ascii=False, indent=2))
+    else:
+        print("管家已恢复可用：")
+        for d in done:
+            print("  · %s" % d)
+        print("")
+        print("现在再运行：python supervisor.py status   应显示 LEVEL : NORMAL")
+        print("(已写审计：actor=rescue)")
+    return 0
+
+
 # ---------------------------------------------------------------- cli
 
 def cmd_doctor(args):
@@ -1319,6 +1407,36 @@ def cmd_doctor(args):
         add("file:view_image_guard.ps1", gp.exists(), str(gp))
         iprev = gp.parent / "imgpreview.ps1"
         add("file:imgpreview.ps1", iprev.exists(), str(iprev))
+
+    # 恢复通道：被卡住时能不能一条命令拉回来（"搞砸了也收得了场"）
+    # 只检查"存在且可调用"，不实际修改状态。
+    try:
+        m = maintenance_state()
+        add("maintenance_state_readable", True,
+            ("维护模式开启中，剩余约 %.0f 分钟" % (m.get("remaining_min") or 0))
+            if m.get("active") else "维护模式未开启")
+    except Exception as exc:
+        add("maintenance_state_readable", False, repr(exc))
+    rescue_fn = globals().get("cmd_rescue")
+    add("rescue_command_available", callable(rescue_fn),
+        "python supervisor.py rescue —— 任何状态下把管家拉回可用")
+    try:
+        desktop = Path.home() / "Desktop" / "管家-紧急恢复.lnk"
+        add("desktop_rescue_shortcut", desktop.exists(), str(desktop))
+    except Exception as exc:
+        add("desktop_rescue_shortcut", False, repr(exc))
+    try:
+        avail = True
+        for name in ("session.json", "intervention.json", "maintenance.json"):
+            fp = STATE / name
+            if fp.exists():
+                try:
+                    json.loads(fp.read_text(encoding="utf-8"))
+                except Exception:
+                    avail = False
+        add("state_files_parseable", avail, "任一项为 False 时：运行 rescue 会归档损坏文件并重建")
+    except Exception as exc:
+        add("state_files_parseable", False, repr(exc))
 
     for script in ("supervisor.py", "run_hook.cmd", "hook_supervisor.ps1", "hook_post.ps1", "hook_session.ps1"):
         f = ROOT / script
@@ -1404,6 +1522,12 @@ def build_parser():
     sp.set_defaults(func=cmd_handoff)
 
     sub.add_parser("reset").set_defaults(func=cmd_reset)
+
+    sp = sub.add_parser("rescue", help="紧急恢复：任何状态下把管家恢复为可用（清阻断/清维护/重置会话）")
+    sp.add_argument("--by", default="rescue")
+    sp.add_argument("--reason", default="紧急恢复")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(func=cmd_rescue)
 
     sp = sub.add_parser("doctor", help="自检：hook 接线 / 解释器路径 / 规则完整性")
     sp.add_argument("--json", action="store_true")

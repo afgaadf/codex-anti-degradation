@@ -1,4 +1,4 @@
-﻿Add-Type -AssemblyName System.Windows.Forms
+﻿﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $root = $PSScriptRoot
@@ -8,7 +8,7 @@ $sup = Join-Path $root 'supervisor.py'
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = '管家维护模式'
-$form.Size = New-Object System.Drawing.Size(620, 430)
+$form.Size = New-Object System.Drawing.Size(620, 500)
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
@@ -66,6 +66,20 @@ $refresh.Location = New-Object System.Drawing.Point(420, 315)
 $refresh.Size = New-Object System.Drawing.Size(150, 42)
 $form.Controls.Add($refresh)
 
+$rescue = New-Object System.Windows.Forms.Button
+$rescue.Text = '紧急恢复（卡住了点这里）'
+$rescue.Location = New-Object System.Drawing.Point(24, 375)
+$rescue.Size = New-Object System.Drawing.Size(546, 46)
+$rescue.BackColor = [System.Drawing.Color]::FromArgb(255, 235, 235)
+$form.Controls.Add($rescue)
+
+$rescueHint = New-Object System.Windows.Forms.Label
+$rescueHint.Text = '把管家从任何状态拉回可用：清阻断、清维护模式、重置会话。只动运行状态。'
+$rescueHint.AutoSize = $true
+$rescueHint.ForeColor = [System.Drawing.Color]::FromArgb(120, 40, 40)
+$rescueHint.Location = New-Object System.Drawing.Point(26, 428)
+$form.Controls.Add($rescueHint)
+
 function Invoke-Maintenance([string[]]$Arguments) {
     $raw = & $py $sup @Arguments 2>&1 | Out-String
     try { return ($raw | ConvertFrom-Json) } catch { return [pscustomobject]@{ ok = $false; error = ('程序返回异常：' + $raw) } }
@@ -80,6 +94,17 @@ function Refresh-Status {
         $status.Text = '维护模式：未开启'
     }
 }
+
+$rescue.Add_Click({
+    $r = Invoke-Maintenance @('rescue','--by',$env:USERNAME,'--reason','面板紧急恢复','--json')
+    if ($r -and $r.ok) {
+        $steps = ($r.steps -join "`r`n  ")
+        [void][System.Windows.Forms.MessageBox]::Show(("管家已恢复可用：`r`n  " + $steps), '管家 - 紧急恢复', 'OK', 'Information')
+    } else {
+        [void][System.Windows.Forms.MessageBox]::Show(('恢复失败：' + ($(if ($r.error) { $r.error } else { '未知原因' }))), '管家 - 紧急恢复', 'OK', 'Error')
+    }
+    Refresh-Status
+})
 
 $on.Add_Click({
     $why = $reason.Text.Trim()

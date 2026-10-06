@@ -152,6 +152,33 @@ $S = "python $env:USERPROFILE\.codex\anti-degradation\supervisor.py"
 
 ---
 
+## 五·六、卡住了怎么办：紧急恢复（2026-10-07）
+
+**这一条是为了"搞砸了也收得了场"。** 不管管家处于什么状态，下面任何一条都能拉回可用：
+
+- **桌面双击**「管家-紧急恢复」
+- 维护面板上的 **「紧急恢复（卡住了点这里）」** 按钮
+- 命令行：`python supervisor.py rescue`
+
+它做的事：
+
+1. 归档**修不好的** state 文件（放到 `state/_rescue_<时间>/`，不直接丢）；
+2. 会话重置为 `NORMAL`；
+3. 清除阻断与指令；
+4. 关闭维护模式。
+
+它**刻意不做**这几件事，也不读这几样东西：
+
+- 不读 `rules.json` —— 规则坏了也照样能跑；
+- 不检查是否在 Codex 内 —— 紧急通道必须随时可用（维护模式的限制**仍然**生效）；
+- 不要求 `--by` / `--reason` —— 卡住的人不该再被参数难住；
+- 不碰规则、不碰信任、不碰 hook 接线；只动运行状态；
+- 每次执行都写审计（`actor=rescue`）。
+
+排查用：`python supervisor.py doctor` 会报告
+`rescue_command_available` / `desktop_rescue_shortcut` / `state_files_parseable`
+三项是否就位。
+
 ## 五·五、外部维护模式（2026-10-07）
 
 这是给开发和维护用的**外部、限时、非常驻**闸门，不是常驻运行模式，也没有页面内开关。
