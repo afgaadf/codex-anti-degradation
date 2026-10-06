@@ -271,7 +271,6 @@ try {
   }
 
   $eventJson = $supEvent | ConvertTo-Json -Compress -Depth 6
-  Write-HookLog ("event_len={0} json={1}" -f $eventJson.Length, $eventJson)
   $psi = New-Object System.Diagnostics.ProcessStartInfo
   $psi.FileName = $pyExe
   $psi.Arguments = '"{0}" observe' -f $supScript
@@ -288,8 +287,7 @@ try {
   $stdout = $proc.StandardOutput.ReadToEnd()
   $stderr = $proc.StandardError.ReadToEnd()
   $proc.WaitForExit(20000) | Out-Null
-  Write-HookLog ("supervisor rc={0} stdout_len={1} stderr_len={2} path={3}" -f $proc.ExitCode, $stdout.Length, $stderr.Length, $supScript)
-  if ($stdout) { Write-HookLog ("supervisor stdout=" + $stdout.Substring(0, [Math]::Min(300, $stdout.Length))) }
+  Write-HookLog ("supervisor rc={0} stdout_len={1} stderr_len={2}" -f $proc.ExitCode, $stdout.Length, $stderr.Length)
 
   if ([string]::IsNullOrWhiteSpace($stdout)) {
     Write-HookLog "supervisor produced no output; stderr=$stderr -> passthrough"
