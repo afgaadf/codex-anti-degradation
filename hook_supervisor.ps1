@@ -19,7 +19,7 @@ $WarningPreference = 'SilentlyContinue'
 $ProgressPreference = 'SilentlyContinue'
 $InformationPreference = 'SilentlyContinue'
 
-$hookDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ($PSScriptRoot) { $hookDir = $PSScriptRoot } else { $hookDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 $cfgPath = Join-Path $hookDir 'hook_config.json'
 $logDir  = Join-Path $hookDir 'logs'
 $log     = Join-Path $logDir 'hook.log'
