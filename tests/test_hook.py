@@ -57,9 +57,7 @@ def call_hook(hook, payload, home="__default__"):
             details.append("hook_config=" + cfg.read_text(encoding="utf-8", errors="replace"))
         if log.exists():
             details.append("hook.log=" + log.read_text(encoding="utf-8", errors="replace")[-2000:])
-        err = (err + "
-" + "
-".join(details)).strip()
+        err = (err + "\n" + "\n".join(details)).strip()
     return r.returncode, out, err
 
 
