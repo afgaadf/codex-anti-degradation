@@ -29,6 +29,7 @@ if (Test-Path -LiteralPath $cfgPath) {
     if ($cfg.python) { $pyExe = [string]$cfg.python }
   } catch { }
 }
+if ($env:SUPERVISOR_HOME) { $supHome = [string]$env:SUPERVISOR_HOME }
 $supScript = Join-Path $supHome 'supervisor.py'
 
 function Write-HookLog([string]$msg) {

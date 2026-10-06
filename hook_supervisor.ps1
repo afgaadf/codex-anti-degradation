@@ -35,6 +35,7 @@ if (Test-Path -LiteralPath $cfgPath) {
   } catch { }
 }
 
+if ($env:SUPERVISOR_HOME) { $supHome = [string]$env:SUPERVISOR_HOME }
 $supScript = Join-Path $supHome 'supervisor.py'
 
 # ── 诊断探针：无条件记录，确认脚本是否被真正执行 ──

@@ -67,10 +67,15 @@ def seed_thresholds(root, **kw):
     assert code == 0, f"seed_thresholds failed: {out}"
 
 
-def call_hook(hook, payload):
+def call_hook(hook, payload, home="__default__"):
+    env = os.environ.copy()
+    if home == "__default__":
+        home = Path(hook).parent
+    if home:
+        env["SUPERVISOR_HOME"] = str(home)
     r = subprocess.run([SHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(hook)],
                        capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       input=payload, timeout=90)
+                       input=payload, timeout=90, env=env)
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 
 
@@ -195,7 +200,7 @@ def main():
     shutil.copy2(SRC / "hook_session.ps1", d / "hook_session.ps1")
     (d / "hook_config.json").write_text(json.dumps({
         "supervisor_home": str(d / "gone"), "python": PY}), encoding="utf-8")
-    code, out, _ = call_hook(d / "hook_session.ps1", payload(d, "UserPromptSubmit", tr))
+    code, out, _ = call_hook(d / "hook_session.ps1", payload(d, "UserPromptSubmit", tr), home=False)
     check("不可达时放行", code == 0 and out.strip() == "{}", f"code={code} out={out[:120]}")
     check("已记录日志", (d / "logs" / "session.log").exists())
 

@@ -31,15 +31,20 @@ def check(name, cond, detail=""):
 
 def sup(root, *args, event=None):
     r = subprocess.run([PY, str(root / "supervisor.py"), *args],
-                       capture_output=True, text=True, encoding="utf-8",
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
                        input=event, cwd=str(root))
     return r.returncode, (r.stdout or "").strip()
 
 
-def call_hook(hook, payload):
+def call_hook(hook, payload, home="__default__"):
+    env = os.environ.copy()
+    if home == "__default__":
+        home = Path(hook).parent
+    if home:
+        env["SUPERVISOR_HOME"] = str(home)
     r = subprocess.run([PS, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(hook)],
-                       capture_output=True, text=True, encoding="utf-8",
-                       input=payload, timeout=90)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       input=payload, timeout=90, env=env)
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 
 
@@ -49,7 +54,7 @@ def sup_external(root, *args, event=None):
         if k.startswith("CODEX_") or k == "OPENAI_API_KEY":
             env.pop(k, None)
     r = subprocess.run([PY, str(root / "supervisor.py"), *args],
-                       capture_output=True, text=True, encoding="utf-8",
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
                        input=event, cwd=str(root), env=env)
     return r.returncode, (r.stdout or "").strip()
 
@@ -168,7 +173,7 @@ def main():
     shutil.copy2(SRC / "hook_supervisor.ps1", d / "hook_supervisor.ps1")
     (d / "hook_config.json").write_text(json.dumps({
         "supervisor_home": str(d / "does-not-exist"), "python": PY}), encoding="utf-8")
-    code, out, err = call_hook(d / "hook_supervisor.ps1", PAYLOAD_EXEC)
+    code, out, err = call_hook(d / "hook_supervisor.ps1", PAYLOAD_EXEC, home=False)
     check("不可达时放行", code == 0 and out.strip() == "{}", f"code={code} out={out[:120]}")
     lg = d / "logs" / "hook.log"
     check("已记录日志", lg.exists() and lg.stat().st_size > 0)
@@ -299,8 +304,9 @@ def main():
                                    ensure_ascii=False)),
         )
         for mode, payload in cases:
+            env12 = os.environ.copy(); env12["SUPERVISOR_HOME"] = str(root12)
             rr = subprocess.run(["cmd.exe", "/d", "/c", str(lch), mode], input=payload,
-                                capture_output=True, text=True, encoding="utf-8", timeout=90)
+                                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90, env=env12)
             check("run_hook.cmd " + mode + " -> 合法 JSON 且 exit 0",
                   rr.returncode == 0 and (rr.stdout or "").strip().startswith("{"),
                   f"code={rr.returncode} out={(rr.stdout or '')[:120]} err={(rr.stderr or '')[:120]}")
