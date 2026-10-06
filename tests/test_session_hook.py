@@ -48,7 +48,7 @@ SHELL = find_shell()
 
 def sup(root, *args):
     r = subprocess.run([PY, str(root / "supervisor.py"), *args],
-                       capture_output=True, text=True, encoding="utf-8", cwd=str(root))
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(root))
     return r.returncode, (r.stdout or "").strip()
 
 
@@ -69,7 +69,7 @@ def seed_thresholds(root, **kw):
 
 def call_hook(hook, payload):
     r = subprocess.run([SHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(hook)],
-                       capture_output=True, text=True, encoding="utf-8",
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
                        input=payload, timeout=90)
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 

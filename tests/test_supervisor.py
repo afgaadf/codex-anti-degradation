@@ -33,11 +33,20 @@ def check(name, cond, detail=""):
         FAILURES.append(name)
 
 
-def run(root, *args, event=None):
+def run(root, *args, event=None, env=None):
     r = subprocess.run([PY, str(root / "supervisor.py"), *args],
-                       capture_output=True, text=True, encoding="utf-8",
-                       input=event, cwd=str(root))
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       input=event, cwd=str(root), env=env)
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
+
+
+def run_as_codex(root, *args, event=None):
+    """Simulate the producer environment even on a clean GitHub runner."""
+    env = os.environ.copy()
+    env["CODEX_SESSION_ID"] = "ci-test"
+    env["CODEX_THREAD_ID"] = "ci-test"
+    env["CODEX_SHELL"] = "1"
+    return run(root, *args, event=event, env=env)
 
 
 def jload(raw):
@@ -54,7 +63,7 @@ def run_external(root, *args, event=None):
         if k.startswith("CODEX_") or k == "OPENAI_API_KEY":
             env.pop(k, None)
     r = subprocess.run([PY, str(root / "supervisor.py"), *args],
-                       capture_output=True, text=True, encoding="utf-8",
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
                        input=event, cwd=str(root), env=env)
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 
@@ -423,7 +432,7 @@ def main():
     turns(rm, 3)
     code, out, _ = run(rm, "observe", event=json.dumps({"kind": "turn"}))
     check("维护前 BLOCKED 拒绝", code == 2 and jload(out).get("decision") == "deny", out[:160])
-    code, out, _ = run(rm, "maintenance", "on", "--by", "human", "--reason", "测试", "--minutes", "1")
+    code, out, _ = run_as_codex(rm, "maintenance", "on", "--by", "human", "--reason", "测试", "--minutes", "1")
     check("Codex 内不能启动维护模式", code == 2 and jload(out).get("ok") is False and not (rm / "state" / "maintenance.json").exists(), out[:160])
     code, out, _ = run_external(rm, "maintenance", "on", "--by", "human", "--reason", "测试", "--minutes", "1")
     check("外部可启动限时维护模式", code == 0 and jload(out).get("ok") is True, out[:160])
