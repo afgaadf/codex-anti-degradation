@@ -1,5 +1,7 @@
 # anti-degradation supervisor
 
+[![CI](https://github.com/afgaadf/codex-anti-degradation/actions/workflows/ci.yml/badge.svg)](https://github.com/afgaadf/codex-anti-degradation/actions/workflows/ci.yml)
+
 一个**独立于生产者**的监督层。目的是让"降智"这件事**可见、可拦、可恢复**，
 而不是假装它能被自省消除。
 
