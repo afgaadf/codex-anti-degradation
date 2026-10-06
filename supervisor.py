@@ -760,6 +760,7 @@ def cmd_observe(args):
     ensure_layout()
     try:
         raw = args.event if args.event else sys.stdin.read()
+        raw = str(raw).lstrip("\ufeff")
         ev = json.loads(raw) if raw.strip() else {}
     except Exception as exc:
         audit("observe_parse_error", error=str(exc))
