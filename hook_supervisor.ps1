@@ -71,7 +71,7 @@ function Emit([string]$json) {
 # supervisor 按 UTF-8 读时即乱码（observe_parse_error）。
 # 直接写 BaseStream 字节：PS5.1 没有 StandardInputEncoding 属性，这条路径两个宿主都一致。
 function Write-Utf8Stdin($proc, [string]$text) {
-  $bytes = [System.Text.Encoding]::UTF8.GetBytes($text)
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($text + "`n")
   $bs = $proc.StandardInput.BaseStream
   $bs.Write($bytes, 0, $bytes.Length)
   $bs.Flush()
@@ -271,6 +271,7 @@ try {
   }
 
   $eventJson = $supEvent | ConvertTo-Json -Compress -Depth 6
+  Write-HookLog ("event_len={0} json={1}" -f $eventJson.Length, $eventJson)
   $psi = New-Object System.Diagnostics.ProcessStartInfo
   $psi.FileName = $pyExe
   $psi.Arguments = '"{0}" observe' -f $supScript
