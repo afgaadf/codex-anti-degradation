@@ -35,6 +35,7 @@ if (Test-Path -LiteralPath $cfgPath) {
   } catch { }
 }
 
+if (Test-Path -LiteralPath (Join-Path $hookDir 'supervisor.py')) { $supHome = $hookDir }
 if ($env:SUPERVISOR_HOME) { $supHome = [string]$env:SUPERVISOR_HOME }
 $supScript = Join-Path $supHome 'supervisor.py'
 
