@@ -45,7 +45,22 @@ def call_hook(hook, payload, home="__default__"):
     r = subprocess.run([PS, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(hook)],
                        capture_output=True, text=True, encoding="utf-8", errors="replace",
                        input=payload, timeout=90, env=env)
-    return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
+    out = (r.stdout or "").strip()
+    err = (r.stderr or "").strip()
+    # CI diagnostics: a real hook should never silently collapse to {}.
+    if out == "{}" and Path(hook).name == "hook_supervisor.ps1":
+        parent = Path(hook).parent
+        cfg = parent / "hook_config.json"
+        log = parent / "logs" / "hook.log"
+        details = ["SUPERVISOR_HOME=" + str(env.get("SUPERVISOR_HOME", ""))]
+        if cfg.exists():
+            details.append("hook_config=" + cfg.read_text(encoding="utf-8", errors="replace"))
+        if log.exists():
+            details.append("hook.log=" + log.read_text(encoding="utf-8", errors="replace")[-2000:])
+        err = (err + "
+" + "
+".join(details)).strip()
+    return r.returncode, out, err
 
 
 def sup_external(root, *args, event=None):
@@ -126,9 +141,9 @@ def main():
     code, out, err = call_hook(hook, PAYLOAD_EXEC)
     j = jload(out)
     hso = j.get("hookSpecificOutput", {})
-    check("hook 放行", hso.get("permissionDecision") == "allow", out[:200])
+    check("hook 放行", hso.get("permissionDecision") == "allow", (out + "\n" + err)[:800])
     check("介入指令已注入 reason", "SUPERVISOR" in (hso.get("permissionDecisionReason") or ""),
-          (hso.get("permissionDecisionReason") or "")[:120])
+          ((hso.get("permissionDecisionReason") or "") + "\n" + err)[:800])
 
     banner("3. BLOCKED 状态：hook 必须真正拦下工具调用")
     for _ in range(10):
@@ -139,8 +154,8 @@ def main():
     j = jload(out)
     hso = j.get("hookSpecificOutput", {})
     check("hook 拒绝", hso.get("permissionDecision") == "deny",
-          f"got={hso.get('permissionDecision')} raw={out[:200]}")
-    check("拒绝理由含 SUPERVISOR", "SUPERVISOR" in (hso.get("permissionDecisionReason") or ""))
+          f"got={hso.get('permissionDecision')} raw={(out + chr(10) + err)[:800]}")
+    check("拒绝理由含 SUPERVISOR", "SUPERVISOR" in (hso.get("permissionDecisionReason") or ""), err[:800])
 
     banner("3b. 外部维护模式：BLOCKED 下临时放行但仍保留底层等级")
     code, out = sup_external(root, "maintenance", "on", "--by", "test-human",
