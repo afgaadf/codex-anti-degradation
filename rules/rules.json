@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "note": "监督阈值。改动必须由人通过 rules approve 批准，否则监督层硬阻断。",
+  "thresholds": {
+    "turns_watch": 200,
+    "turns_degraded": 400,
+    "turns_blocked": 800,
+    "context_chars_watch": 50000000,
+    "context_chars_degraded": 100000000,
+    "context_chars_blocked": 200000000,
+    "images_watch": 40,
+    "images_degraded": 80,
+    "elapsed_min_watch": 480,
+    "elapsed_min_degraded": 960,
+    "repeat_command_limit": 3,
+    "compactions_watch": 10,
+    "compactions_blocked": 20,
+    "tool_errors_watch": 5,
+    "tool_errors_degraded": 10,
+    "tool_errors_blocked": 20,
+    "rework_limit": 3,
+    "rework_watch": 2,
+    "rework_degraded": 4,
+    "rework_blocked": 8,
+    "unfinished_watch": 2,
+    "unfinished_degraded": 4,
+    "subagents_watch": 3,
+    "subagents_degraded": 6,
+    "parse_failures_watch": 2,
+    "parse_failures_degraded": 10,
+    "parse_failures_blocked": null
+  },
+  "tier_multiplier": {
+    "watch": 1,
+    "degraded": 3,
+    "blocked": 6
+  },
+  "weights": {
+    "turns": 3,
+    "context_chars": 3,
+    "images": 3,
+    "elapsed": 3,
+    "unverified_claim": 5,
+    "claim_without_evidence": 2,
+    "unregistered_failure": 4,
+    "repeat_command": 3,
+    "critical_debt": 3,
+    "compaction": 8,
+    "tool_error": 3,
+    "rework": 3,
+    "unfinished": 3,
+    "subagents": 3,
+    "parse_failure": 1
+  },
+  "levels": {
+    "watch": 3,
+    "degraded": 8,
+    "blocked": 14
+  },
+  "hard_block_on": [
+    "rules_integrity"
+  ]
+}

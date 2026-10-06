@@ -1,0 +1,16 @@
+# 运行时状态 / 审计 / 批准记录（不入库）
+state/
+rules/approvals/
+logs/
+backup/
+
+# 临时与测试产物
+__pycache__/
+*.pyc
+*.pyo
+w_*.log
+work_test_*.log
+*.tmp
+
+# 本机缓存
+.pytest_cache/
