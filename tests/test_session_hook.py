@@ -30,9 +30,16 @@ def check(name, cond, detail=""):
 
 
 def find_shell():
-    p = Path(r"C:\Users\taich\AppData\Local\Microsoft\WindowsApps\pwsh.exe")
-    if p.exists():
-        return str(p)
+    p = shutil.which("pwsh")
+    if p:
+        return p
+    candidates = [
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WindowsApps" / "pwsh.exe",
+        Path(r"C:\Program Files\PowerShell\7\pwsh.exe"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
     return "pwsh"
 
 

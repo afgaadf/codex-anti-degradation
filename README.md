@@ -82,6 +82,9 @@
 
 ## 四、安装
 
+本机配置 `hook_config.json` 不入公开仓库；首次安装会由 `install.ps1` 生成。需要手动核对时参考 `hook_config.example.json`。
+
+
 ```powershell
 # 先看会做什么（不改任何东西）
 powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -DryRun
@@ -105,7 +108,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
 ## 五、日常使用
 
 ```powershell
-$S = "python C:\Users\taich\.codex\anti-degradation\supervisor.py"
+$S = "python $env:USERPROFILE\.codex\anti-degradation\supervisor.py"
 
 # 看状态
 & $S status
@@ -153,9 +156,9 @@ $S = "python C:\Users\taich\.codex\anti-degradation\supervisor.py"
 
 ```powershell
 # 在 Codex 之外的普通终端执行
-& "C:\Users\taich\.codex\anti-degradation\维护模式.cmd" on "临时维护原因"  # 默认 60 分钟
-& "C:\Users\taich\.codex\anti-degradation\维护模式.cmd" off "维护完成"
-& "C:\Users\taich\.codex\anti-degradation\维护模式.cmd" status
+& "$env:USERPROFILE\.codex\anti-degradation\维护模式.cmd" on "临时维护原因"  # 默认 60 分钟
+& "$env:USERPROFILE\.codex\anti-degradation\维护模式.cmd" off "维护完成"
+& "$env:USERPROFILE\.codex\anti-degradation\维护模式.cmd" status
 ```
 
 规则：

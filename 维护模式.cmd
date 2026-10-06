@@ -1,8 +1,9 @@
 @echo off
 chcp 65001>nul
 setlocal EnableExtensions
-set "ROOT=C:\Users\taich\.codex\anti-degradation"
-set "PY=C:\Users\taich\AppData\Local\Programs\Python\Python312\python.exe"
+set "ROOT=%~dp0"
+if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
+set "PY=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
 if not exist "%PY%" set "PY=python"
 set "PYTHONIOENCODING=utf-8"
 if not exist "%ROOT%\supervisor.py" (

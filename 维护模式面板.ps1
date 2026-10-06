@@ -1,8 +1,10 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$py = 'C:\Users\taich\AppData\Local\Programs\Python\Python312\python.exe'
-$sup = 'C:\Users\taich\.codex\anti-degradation\supervisor.py'
+$root = $PSScriptRoot
+$py = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'
+if (-not (Test-Path -LiteralPath $py)) { $py = 'python' }
+$sup = Join-Path $root 'supervisor.py'
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = '管家维护模式'

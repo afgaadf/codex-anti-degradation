@@ -3,6 +3,15 @@
 本文件记录 anti-degradation 监督内核的重要变更。
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.1] - 2026-10-07
+
+### Changed
+- 维护模式和面板改用 `%~dp0` / `$PSScriptRoot` / `%LOCALAPPDATA%`，不再写死本机用户名和 Python 路径。
+- `hook_config.json` 改为只保留本机配置，不进入公开仓库；新增 `hook_config.example.json`。
+- 增加 GitHub Actions Windows CI。
+
+### Fixed
+- `test_session_hook.py` 的 PowerShell 查找改为跨机器可移植。
 ## [0.1.0] - 2026-10-07
 
 ### Added

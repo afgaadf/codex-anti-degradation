@@ -14,3 +14,4 @@ work_test_*.log
 
 # 本机缓存
 .pytest_cache/
+hook_config.json
